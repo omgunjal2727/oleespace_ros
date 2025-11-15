@@ -1,0 +1,4 @@
+maps/*.pgm
+maps/*.yaml
+.git/
+*.md
