@@ -72,7 +72,7 @@ Open **3 terminals** and run each command in a separate terminal:
 docker exec -it oleespace_slam bash
 source /opt/ros/humble/setup.bash
 source ~/ros2_ws/install/setup.bash
-
+sudo chmod 666 /dev/ttyUSB0
 ros2 launch ydlidar_ros2_driver ydlidar_launch.py
 ```
 

@@ -58,15 +58,19 @@ USER ros
 WORKDIR /home/ros/ros2_ws/src/ydlidar_ros2_driver/params
 COPY --chown=ros:ros config/ydlidar.yaml ./ydlidar.yaml
 
-# Create SLAM config package
+# Create SLAM config package structure
 WORKDIR /home/ros/ros2_ws/src
 RUN mkdir -p slam_config/launch
 
-# Copy SLAM configuration files
+# Copy SLAM configuration files to correct locations
 COPY --chown=ros:ros config/mapper_params_online_async.yaml slam_config/
 COPY --chown=ros:ros config/slam_launch.py slam_config/launch/oleespace_slam_launch.py
+COPY --chown=ros:ros config/complete_slam_launch.py slam_config/launch/complete_slam_launch.py
 COPY --chown=ros:ros config/slam_package.xml slam_config/package.xml
 COPY --chown=ros:ros config/slam_CMakeLists.txt slam_config/CMakeLists.txt
+
+# Make launch files executable
+RUN chmod +x slam_config/launch/*.py
 
 # Build the workspace
 WORKDIR /home/ros/ros2_ws
