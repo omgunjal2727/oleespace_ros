@@ -202,7 +202,8 @@ oleespace_ros/
 
 ## 🤝 Contributors
 
-- Your Name - Initial setup and Docker configuration
+- OM GUNJAL
+- RISHIT DARWADE
 
 ## 📚 Resources
 
