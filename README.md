@@ -49,7 +49,8 @@ docker run -it --rm \
   --privileged \
   --network host \
   --entrypoint /bin/bash \
-  -v /dev:/dev \
+  --device=/dev/ttyACM0 \
+  --device=/dev/ttyUSB0 \
   -v $(pwd)/maps:/home/ros/maps \
   -e DISPLAY=$DISPLAY \
   -v /tmp/.X11-unix:/tmp/.X11-unix \
@@ -81,7 +82,7 @@ ros2 launch ydlidar_ros2_driver ydlidar_launch.py
 docker exec -it oleespace_slam bash
 source /opt/ros/humble/setup.bash
 source ~/ros2_ws/install/setup.bash
-
+sudo chmod 666 /dev/ttyACM0
 ros2 launch slam_config complete_slam_launch.py
 ```
 
