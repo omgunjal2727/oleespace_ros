@@ -2,7 +2,7 @@
 
 Complete ROS2 Humble Docker setup for YDLidar TG50 SLAM and autonomous navigation.
 
-## 🚀 Features
+## Features
 
 - **YDLidar TG50** driver fully configured
 - **ROS2 Humble** in isolated Docker container
@@ -11,14 +11,14 @@ Complete ROS2 Humble Docker setup for YDLidar TG50 SLAM and autonomous navigatio
 - **Nav2** integration ready
 - **Persistent maps** saved to host machine
 
-## 📋 Prerequisites
+## Prerequisites
 
 - Ubuntu 20.04/22.04
 - Docker installed
 - YDLidar TG50 connected via USB (`/dev/ttyUSB0`)
 - X11 for visualization (RViz2)
 
-## 🔧 Installation
+## Installation
 
 ### 1. Clone Repository
 ```bash
@@ -40,7 +40,7 @@ docker build -t oleespace_ros:latest -f docker/Dockerfile .
 xhost +local:docker
 ```
 
-## 🎯 Quick Start
+## Quick Start
 
 ### Launch Container
 ```bash
@@ -63,7 +63,7 @@ source ~/ros2_ws/install/setup.bash
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
 ```
 
-## 🗺️ Running SLAM
+## Running SLAM
 
 Open **3 terminals** and run each command in a separate terminal:
 
@@ -107,7 +107,7 @@ ros2 run nav2_map_server map_saver_cli -f ~/maps/my_office_map
 
 Maps are saved to `./maps/` directory on your host machine.
 
-## 📐 System Architecture
+## System Architecture
 ```
 map (SLAM origin)
  └─ odom (odometry frame)
@@ -115,7 +115,7 @@ map (SLAM origin)
          └─ laser_frame (LiDAR sensor)
 ```
 
-## ⚙️ Configuration Files
+## Configuration Files
 
 | File | Description |
 |------|-------------|
@@ -166,7 +166,7 @@ docker exec -it -u root oleespace_slam bash
 - **SLAM Update**: 1 Hz
 - **Map Resolution**: 0.05m
 
-## 🛠️ Development
+## Development
 
 ### Rebuild After Config Changes
 ```bash
@@ -183,7 +183,7 @@ source install/setup.bash
 
 Add your launch files to `config/` and copy them during Docker build.
 
-## 📁 Project Structure
+## Project Structure
 ```
 oleespace_ros/
 ├── README.md
@@ -200,18 +200,18 @@ oleespace_ros/
     └── .gitkeep
 ```
 
-## 🤝 Contributors
+## Contributors
 
 - OM GUNJAL
 - RISHIT DARWADE
 
-## 📚 Resources
+## Resources
 
 - [YDLidar TG50 Manual](https://www.ydlidar.com/)
 - [ROS2 Humble Docs](https://docs.ros.org/en/humble/)
 - [SLAM Toolbox](https://github.com/SteveMacenski/slam_toolbox)
 - [Base Docker Image](https://github.com/soham2560/docker_images)
 
-## 📝 License
+## License
 
 MIT License
