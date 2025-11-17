@@ -41,9 +41,11 @@ WORKDIR /home/ros
 RUN mkdir -p /home/ros/ros2_ws/src
 
 # Clone YDLidar packages
+# Clone YDLidar and Odometry packages
 WORKDIR /home/ros/ros2_ws/src
 RUN git clone https://github.com/YDLIDAR/YDLidar-SDK.git && \
-    git clone -b humble https://github.com/YDLIDAR/ydlidar_ros2_driver.git
+    git clone -b humble https://github.com/YDLIDAR/ydlidar_ros2_driver.git && \
+    git clone https://github.com/adlink-ros/rf2o_laser_odometry.git
 
 # Build YDLidar SDK
 WORKDIR /home/ros/ros2_ws/src/YDLidar-SDK

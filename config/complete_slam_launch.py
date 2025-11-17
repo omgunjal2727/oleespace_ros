@@ -11,39 +11,29 @@ def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time', default='false')
     
     slam_params_file = os.path.join(slam_config_dir, 'config', 'mapper_params_online_async.yaml')
-    ekf_params_file = os.path.join(slam_config_dir, 'config', 'ekf.yaml')
-    imu_params_file = os.path.join(slam_config_dir, 'config', 'imu_config.yaml')
     ydlidar_params_file = os.path.join(get_package_share_directory('ydlidar_ros2_driver'), 'params', 'ydlidar.yaml')
+    imu_params_file = os.path.join(slam_config_dir, 'config', 'imu_config.yaml')
 
-    
-    # Static transform: base_link -> laser_frame
+    # 1. STATIC TRANSFORMS (Physical Mounting)
+    # base_link -> laser_frame (0.15m up)
     static_transform_base_to_laser = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
-        name='static_tf_base_to_laser',
+        name='base_to_laser',
         arguments=['0', '0', '0.15', '0', '0', '0', 'base_link', 'laser_frame'],
         output='screen'
     )
     
-    # Static transform: base_link -> imu_link
+    # base_link -> imu_link (0.05m up)
     static_transform_base_to_imu = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
-        name='static_tf_base_to_imu',
+        name='base_to_imu',
         arguments=['0', '0', '0.05', '0', '0', '0', 'base_link', 'imu_link'],
         output='screen'
     )
-    
-    # TEMPORARY: Static odom -> base_link (until EKF works)
-    static_transform_odom_to_base = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        name='static_tf_odom_to_base',
-        arguments=['0', '0', '0', '0', '0', '0', 'odom', 'base_link'],
-        output='screen'
-    )
-    
-    # YDLidar Node
+
+    # 2. SENSOR DRIVERS
     ydlidar_node = Node(
         package='ydlidar_ros2_driver',
         executable='ydlidar_ros2_driver_node',
@@ -52,7 +42,6 @@ def generate_launch_description():
         parameters=[ydlidar_params_file]
     )
     
-    # IMU Serial Node
     imu_serial_node = Node(
         package='imu_serial_driver',
         executable='imu_serial_node',
@@ -60,18 +49,26 @@ def generate_launch_description():
         parameters=[imu_params_file],
         output='screen'
     )
-    
-    # Robot Localization (EKF) Node
-    ekf_node = Node(
-        package='robot_localization',
-        executable='ekf_node',
-        name='ekf_filter_node',
+
+    # 3. ODOMETRY (The "Virtual Wheels")
+    # This calculates odom -> base_link from the Lidar
+    rf2o_node = Node(
+        package='rf2o_laser_odometry',
+        executable='rf2o_laser_odometry_node',
+        name='rf2o_laser_odometry',
         output='screen',
-        parameters=[ekf_params_file, {'use_sim_time': use_sim_time}],
-        remappings=[('odometry/filtered', 'odom')]
+        parameters=[{
+            'laser_scan_topic': '/scan',
+            'odom_topic': '/odom',
+            'publish_tf': True,     # CRITICAL: This publishes odom -> base_link
+            'base_frame_id': 'base_link',
+            'odom_frame_id': 'odom',
+            'init_pose_from_topic': '',
+            'freq': 10.0
+        }],
     )
-    
-    # SLAM Toolbox Node
+
+    # 4. SLAM TOOLBOX
     slam_node = Node(
         package='slam_toolbox',
         executable='async_slam_toolbox_node',
@@ -81,9 +78,6 @@ def generate_launch_description():
             slam_params_file,
             {'use_sim_time': use_sim_time}
         ],
-        remappings=[
-            ('/scan', '/scan')
-        ]
     )
     
     return LaunchDescription([
@@ -92,18 +86,10 @@ def generate_launch_description():
             default_value='false',
             description='Use simulation time'
         ),
-        # TF Transforms
-        static_transform_odom_to_base,  # Remove this - EKF will publish odom->base_link
         static_transform_base_to_laser,
         static_transform_base_to_imu,
-        
-        # Sensor Nodes
         ydlidar_node,
         imu_serial_node,
-        
-        # EKF - Enable this once IMU topic is confirmed
-        ekf_node,
-        
-        # SLAM
+        rf2o_node,
         slam_node,
     ])
