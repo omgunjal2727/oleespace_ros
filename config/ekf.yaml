@@ -1,48 +1,32 @@
 ### ekf_filter_node ros__parameters:
 ekf_filter_node:
     ros__parameters:
-        # The frequency, in Hz, at which the filter will output a position estimate
-        frequency: 50.0
-        
-        # The period, in seconds, after which we consider a sensor to have timed out
-        sensor_timeout: 0.1
-        
-        # ekf_localization_node and ukf_localization_node both use a 3D omnidirectional motion model
+        frequency: 30.0
+        sensor_timeout: 0.5  # Reduced for better responsiveness
         two_d_mode: true
         
-        # Frame IDs
         map_frame: map
         odom_frame: odom
         base_link_frame: base_link
         world_frame: odom
         
-        # Whether to publish the transform from world_frame to base_link_frame
         publish_tf: true
         
-        # Whether to publish the acceleration state
-        publish_acceleration: false
-        
-        # IMU sensor configuration (imu0)
-        # Since we have NO wheel odometry, we'll use IMU for:
-        # - Angular velocity (gyroscope) - CRITICAL for rotation
-        # - Linear acceleration - helps estimate velocity changes
-        imu0: imu/data_raw
+        # SINGLE IMU configuration (removed duplicate!)
+        imu0: /imu/data
         imu0_config: [false, false, false,  # x, y, z position (not available from IMU)
-                      false, false, false,  # roll, pitch, yaw orientation (not reliable without magnetometer)
+                      false, false, false,  # roll, pitch, yaw orientation (unreliable without mag)
                       false, false, false,  # x, y, z linear velocity (not directly measured)
-                      false, false, true,   # roll rate, pitch rate, yaw rate (USE YAW RATE from gyro)
+                      false, false, true,   # roll rate, pitch rate, yaw rate (USE YAW RATE)
                       true,  true,  false]  # x, y, z linear acceleration (USE X, Y accel)
         
         imu0_differential: false
         imu0_relative: false
         imu0_queue_size: 10
-        
-        # Remove gravity from acceleration measurements
         imu0_remove_gravitational_acceleration: true
         
         # Process noise covariance matrix (Q)
-        # Higher values = trust the model less, trust sensors more
-        # Since we have no wheel odometry, increase uncertainty for velocity
+        # Increased velocity uncertainty since no wheel odometry
         process_noise_covariance: [0.05, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
                                    0.0,  0.05, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
                                    0.0,  0.0,  0.06, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
@@ -60,7 +44,6 @@ ekf_filter_node:
                                    0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.015]
         
         # Initial state covariance
-        # Higher values = more initial uncertainty
         initial_estimate_covariance: [1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
                                       0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
                                       0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
