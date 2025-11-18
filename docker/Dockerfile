@@ -30,11 +30,12 @@ RUN if ! id -u ros 2>/dev/null; then \
 USER ros
 
 # Create workspace
-WORKDIR /home/ros
-RUN mkdir -p /home/ros/ros2_ws/src
-
-# Clone YDLidar packages
 WORKDIR /home/ros/ros2_ws/src
+
+# ---------------------------------------------------------
+# 1. YDLIDAR SETUP
+# ---------------------------------------------------------
+# Clone YDLidar packages
 RUN git clone https://github.com/YDLIDAR/YDLidar-SDK.git && \
     git clone -b humble https://github.com/YDLIDAR/ydlidar_ros2_driver.git
 
@@ -54,26 +55,24 @@ RUN make install && \
 # Switch back to ros user
 USER ros
 
-# Copy configuration files
-WORKDIR /home/ros/ros2_ws/src/ydlidar_ros2_driver/params
-COPY --chown=ros:ros config/ydlidar.yaml ./ydlidar.yaml
+# ---------------------------------------------------------
+# 2. COPY YOUR PACKAGE (The Major Change)
+# ---------------------------------------------------------
+# We copy the entire local package folder into the container workspace
+# NOTE: Run docker build from OLEE_ROS_WS root
+COPY --chown=ros:ros src/oleespace_ros /home/ros/ros2_ws/src/oleespace_ros
 
-# Create SLAM config package structure
-WORKDIR /home/ros/ros2_ws/src
-RUN mkdir -p slam_config/launch
+# Update YDLidar driver config with your custom yaml
+# (We copy it from your package to the driver package)
+RUN cp /home/ros/ros2_ws/src/oleespace_ros/config/ydlidar.yaml \
+       /home/ros/ros2_ws/src/ydlidar_ros2_driver/params/ydlidar.yaml
 
-# Copy SLAM configuration files to correct locations
-COPY --chown=ros:ros config/mapper_params_online_async.yaml slam_config/
-COPY --chown=ros:ros config/slam_launch.py slam_config/launch/oleespace_slam_launch.py
-COPY --chown=ros:ros config/complete_slam_launch.py slam_config/launch/complete_slam_launch.py
-COPY --chown=ros:ros config/slam_package.xml slam_config/package.xml
-COPY --chown=ros:ros config/slam_CMakeLists.txt slam_config/CMakeLists.txt
-
-# Make launch files executable
-RUN chmod +x slam_config/launch/*.py
-
-# Build the workspace
+# ---------------------------------------------------------
+# 3. BUILD
+# ---------------------------------------------------------
 WORKDIR /home/ros/ros2_ws
+
+# Build the workspace (Builds both YDLidar and oleespace_ros)
 RUN /bin/bash -c "source /opt/ros/humble/setup.bash && \
     colcon build --symlink-install --cmake-args -DCMAKE_CXX_FLAGS='-Wno-error'"
 
@@ -82,10 +81,6 @@ RUN echo "source /opt/ros/humble/setup.bash" >> /home/ros/.bashrc && \
     echo "source /home/ros/ros2_ws/install/setup.bash" >> /home/ros/.bashrc && \
     echo "export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:/usr/local/lib" >> /home/ros/.bashrc
 
-# Create maps directory
-RUN mkdir -p /home/ros/maps
-
-WORKDIR /home/ros
-
 # Entry point
+WORKDIR /home/ros
 CMD ["/bin/bash"]

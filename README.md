@@ -21,21 +21,30 @@ Complete ROS2 Humble Docker setup for YDLidar TG50 SLAM and autonomous navigatio
 ## 🔧 Installation
 
 ### 1. Clone Repository
+
 ```bash
+# Create a workspace folder
+mkdir -p ~/OLEE_ROS_WS/src
+cd ~/OLEE_ROS_WS/src
+
+# Clone the package
 git clone https://github.com/YOUR_USERNAME/oleespace_ros.git
-cd oleespace_ros
 ```
 
 ### 2. Build Docker Image
+
+Go to the root of your workspace (OLEE_ROS_WS) to build the image.
+
 ```bash
-# Pull base image
-docker pull ghcr.io/soham2560/humble:latest
+cd ~/OLEE_ROS_WS
 
 # Build custom image (takes 10-15 minutes first time)
-docker build -t oleespace_ros:latest -f docker/Dockerfile .
+# Note: Run this from the folder containing the 'src' directory
+docker build -t oleespace_slam:latest -f src/oleespace_ros/docker/Dockerfile .
 ```
 
 ### 3. Setup X11 for GUI
+
 ```bash
 xhost +local:docker
 ```
@@ -43,6 +52,7 @@ xhost +local:docker
 ## 🎯 Quick Start
 
 ### Launch Container
+
 ```bash
 docker run -it --rm \
   --name oleespace_slam \
@@ -53,10 +63,13 @@ docker run -it --rm \
   -v $(pwd)/maps:/home/ros/maps \
   -e DISPLAY=$DISPLAY \
   -v /tmp/.X11-unix:/tmp/.X11-unix \
-  oleespace_ros:latest
+  oleespace_slam:latest
 ```
 
 ### Inside Container - Setup Environment
+
+The container is pre-configured, but if you need to source manually:
+
 ```bash
 source /opt/ros/humble/setup.bash
 source ~/ros2_ws/install/setup.bash
@@ -65,49 +78,54 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
 
 ## 🗺️ Running SLAM
 
-Open **3 terminals** and run each command in a separate terminal:
+Open 3 terminals and run each command in a separate terminal:
 
 ### Terminal 1: Launch LiDAR
+
 ```bash
 docker exec -it oleespace_slam bash
-source /opt/ros/humble/setup.bash
 source ~/ros2_ws/install/setup.bash
+
 sudo chmod 666 /dev/ttyUSB0
 ros2 launch ydlidar_ros2_driver ydlidar_launch.py
 ```
 
 ### Terminal 2: Launch SLAM with TF
+
+Note: We now use the correct package name `oleespace_ros`
+
 ```bash
 docker exec -it oleespace_slam bash
-source /opt/ros/humble/setup.bash
 source ~/ros2_ws/install/setup.bash
 
-ros2 launch slam_config complete_slam_launch.py
+ros2 launch oleespace_ros complete_slam_launch.py
 ```
 
 ### Terminal 3: Visualize in RViz
+
 ```bash
 docker exec -it oleespace_slam bash
-source /opt/ros/humble/setup.bash
 source ~/ros2_ws/install/setup.bash
 
 rviz2
 ```
 
-**In RViz:**
-1. Set Fixed Frame to `map`
-2. Add → By topic → `/map` → Map
-3. Add → By topic → `/scan` → LaserScan
-4. Move robot around to build the map
+In RViz:
+- Set Fixed Frame to `map`
+- Add → By topic → /map → Map
+- Add → By topic → /scan → LaserScan
+- Move robot around to build the map
 
 ### Save Your Map
+
 ```bash
 ros2 run nav2_map_server map_saver_cli -f ~/maps/my_office_map
 ```
 
-Maps are saved to `./maps/` directory on your host machine.
+Maps are saved to `./maps/` directory on your host machine (synced via Docker volume).
 
 ## 📐 System Architecture
+
 ```
 map (SLAM origin)
  └─ odom (odometry frame)
@@ -117,16 +135,19 @@ map (SLAM origin)
 
 ## ⚙️ Configuration Files
 
-| File | Description |
-|------|-------------|
+| File Location | Description |
+|---------------|-------------|
 | `config/ydlidar.yaml` | YDLidar TG50 parameters |
 | `config/mapper_params_online_async.yaml` | SLAM Toolbox configuration |
-| `config/complete_slam_launch.py` | Unified launch file with TF tree |
-| `docker/Dockerfile` | Custom ROS2 container image |
+| `launch/complete_slam_launch.py` | Unified launch file with TF tree |
+| `launch/slam_launch.py` | Base SLAM launch logic |
+| `package.xml` | Package dependencies and definitions |
+| `CMakeLists.txt` | Build rules for colcon |
 
 ## 🔍 Troubleshooting
 
 ### LiDAR Not Detected
+
 ```bash
 # Check device
 ls -l /dev/ttyUSB*
@@ -135,83 +156,42 @@ ls -l /dev/ttyUSB*
 sudo chmod 666 /dev/ttyUSB0
 ```
 
-### SLAM Dropping Messages
+### Package Not Found
 
-- Ensure all 3 terminals are running
-- Check TF tree: `ros2 run tf2_tools view_frames`
-- Verify scan rate: `ros2 topic hz /scan` (should be ~7 Hz)
+If you see `Package 'oleespace_ros' not found`:
+- Ensure you are inside the container.
+- Run: `source ~/ros2_ws/install/setup.bash`
+- Run: `colcon build` (inside container) if you modified files.
 
 ### RViz Not Opening
+
 ```bash
 # On host
 xhost +local:docker
 echo $DISPLAY  # Should show :0 or :1
-
-# Test X11
-docker run --rm -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix ubuntu:22.04 xeyes
 ```
-
-### Container Permission Issues
-
-The container uses the `ros` user. If you need root:
-```bash
-docker exec -it -u root oleespace_slam bash
-```
-
-## 📊 Performance Specs
-
-- **Scan Rate**: 7 Hz
-- **Range**: 0.05m - 50m  
-- **Resolution**: 20kHz sampling
-- **SLAM Update**: 1 Hz
-- **Map Resolution**: 0.05m
-
-## 🛠️ Development
-
-### Rebuild After Config Changes
-```bash
-# Rebuild Docker image
-docker build -t oleespace_ros:latest -f docker/Dockerfile .
-
-# Or just rebuild ROS workspace inside container
-cd ~/ros2_ws
-colcon build --symlink-install
-source install/setup.bash
-```
-
-### Custom Launch Files
-
-Add your launch files to `config/` and copy them during Docker build.
 
 ## 📁 Project Structure
+
 ```
-oleespace_ros/
-├── README.md
-├── docker/
-│   └── Dockerfile              # Custom Docker image
-├── config/
-│   ├── ydlidar.yaml           # LiDAR configuration
-│   ├── mapper_params_online_async.yaml
-│   ├── slam_launch.py
-│   ├── complete_slam_launch.py # Complete TF + SLAM
-│   ├── slam_package.xml
-│   └── slam_CMakeLists.txt
-└── maps/                       # Saved maps (auto-created)
-    └── .gitkeep
+OLEE_ROS_WS/
+└── src/
+    └── oleespace_ros/          <-- Package Root
+        ├── package.xml         <-- Defines dependencies
+        ├── CMakeLists.txt      <-- Build configuration
+        ├── launch/             <-- Launch scripts (.py)
+        │   ├── complete_slam_launch.py
+        │   └── slam_launch.py
+        ├── config/             <-- Parameters (.yaml)
+        │   ├── mapper_params_online_async.yaml
+        │   └── ydlidar.yaml
+        ├── maps/               <-- Map files (.pgm/.yaml)
+        ├── scripts/            <-- Helper scripts (.sh)
+        └── docker/             <-- Docker configuration
+            └── Dockerfile
 ```
 
 ## 🤝 Contributors
 
 - OM GUNJAL
 - RISHIT DARWADE
-
-## 📚 Resources
-
-- [YDLidar TG50 Manual](https://www.ydlidar.com/)
-- [ROS2 Humble Docs](https://docs.ros.org/en/humble/)
-- [SLAM Toolbox](https://github.com/SteveMacenski/slam_toolbox)
-- [Base Docker Image](https://github.com/soham2560/docker_images)
-
-## 📝 License
-
-MIT License
