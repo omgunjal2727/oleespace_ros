@@ -1,8 +1,18 @@
-### ekf_filter_node ros__parameters:
 ekf_filter_node:
     ros__parameters:
+
+    # ... (other parameters)
+        
+        # --- INITIALIZATION FIX ---
+        # Forces the filter to start at the position reported by the sensor,
+        # but since odom0_relative is false, it forces a 0, 0, 0 start.
+        initial_base_link_pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] 
+        
+        # ... (rest of the parameters)
+        
+        # --- GENERAL PARAMETERS ---
         frequency: 30.0
-        sensor_timeout: 0.5  # Reduced for better responsiveness
+        sensor_timeout: 0.5
         two_d_mode: true
         
         map_frame: map
@@ -10,23 +20,26 @@ ekf_filter_node:
         base_link_frame: base_link
         world_frame: odom
         
-        publish_tf: true
+        publish_tf: true # EKF publishes odom -> base_link
         
-        # SINGLE IMU configuration (removed duplicate!)
-        imu0: /imu/data
-        imu0_config: [false, false, false,  # x, y, z position (not available from IMU)
-                      false, false, false,  # roll, pitch, yaw orientation (unreliable without mag)
-                      false, false, false,  # x, y, z linear velocity (not directly measured)
-                      false, false, true,   # roll rate, pitch rate, yaw rate (USE YAW RATE)
-                      true,  true,  false]  # x, y, z linear acceleration (USE X, Y accel)
+        # --- ODOMETRY INPUT (RF2O Filtered) ---
+        # The EKF consumes the raw, jittery /odom_rf2o topic from the Lidar Odometry node
+        odom0: /odom_rf2o
         
-        imu0_differential: false
-        imu0_relative: false
-        imu0_queue_size: 10
-        imu0_remove_gravitational_acceleration: true
+        # We trust RF2O's position (x, y, yaw) and velocity (dx, dy, dyaw)
+        odom0_config: [true, true, false,   # x, y position (USE)
+                       false, false, true,   # yaw orientation (USE)
+                       true, true, false,   # x, y linear velocity (USE)
+                       false, false, true,   # yaw rate (USE angular velocity from RF2O)
+                       false, false, false] # linear acceleration
         
-        # Process noise covariance matrix (Q)
-        # Increased velocity uncertainty since no wheel odometry
+        odom0_differential: false
+        odom0_relative: false
+        odom0_queue_size: 10
+        
+        # --- PROCESS NOISE COVARIANCE (Q) ---
+        # Controls the filter's certainty about its prediction.
+        # Keeping velocity noise slightly higher (rows 7, 8, 9) allows the filter to smooth high-frequency jitter.
         process_noise_covariance: [0.05, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
                                    0.0,  0.05, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
                                    0.0,  0.0,  0.06, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
@@ -43,7 +56,7 @@ ekf_filter_node:
                                    0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.01, 0.0,
                                    0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.015]
         
-        # Initial state covariance
+        # --- INITIAL STATE COVARIANCE ---
         initial_estimate_covariance: [1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
                                       0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
                                       0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
